@@ -32,7 +32,8 @@ end
 
 local altColor = {}
 function Power:UpdateColor(frame)
-	local powerID, currentType, altR, altG, altB = UnitPowerType(frame.unit)
+	local ok, powerID, currentType, altR, altG, altB = pcall(UnitPowerType, frame.unit)
+	if not ok then return end
 	frame.powerBar.currentType = currentType
 
 	-- Overridden power types like Warlock pets, or Ulduar vehicles use "POWER_TYPE_#####" but triggers power events with "ENERGY", so this fixes that

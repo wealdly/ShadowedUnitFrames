@@ -11,6 +11,11 @@ local unitFrames, headerFrames, frameList, unitEvents, childUnits, headerUnits, 
 local remappedUnits = Units.remappedUnits
 local _G = getfenv(0)
 
+local function SafeUnitGUID(unit)
+	local ok, guid = pcall(UnitGUID, unit)
+	return ok and guid or nil
+end
+
 ShadowUF.Units = Units
 ShadowUF:RegisterModule(Units, "units")
 
@@ -366,7 +371,7 @@ local function checkVehicleData(self, elapsed)
 			self.dataAttempts = nil
 			self:SetScript("OnUpdate", nil)
 
-			self.unitGUID = UnitGUID(self.unit)
+			self.unitGUID = SafeUnitGUID(self.unit)
 			self:FullUpdate()
 		end
 	end
@@ -377,7 +382,7 @@ function Units:CheckVehicleStatus(frame, event, unit)
 	if( event and frame.unitOwner ~= unit ) then return end
 
 	-- Not in a vehicle yet, and they entered one that has a UI or they were in a vehicle but the GUID changed (vehicle -> vehicle)
-	if( ( not frame.inVehicle or (UnitExists(frame.vehicleUnit) and frame.unitGUID ~= UnitGUID(frame.vehicleUnit)) ) and UnitHasVehicleUI(frame.unitOwner) and UnitHasVehiclePlayerFrameUI(frame.unitOwner) and not ShadowUF.db.profile.units[frame.unitType].disableVehicle ) then
+	if( ( not frame.inVehicle or (UnitExists(frame.vehicleUnit) and frame.unitGUID ~= SafeUnitGUID(frame.vehicleUnit)) ) and UnitHasVehicleUI(frame.unitOwner) and UnitHasVehiclePlayerFrameUI(frame.unitOwner) and not ShadowUF.db.profile.units[frame.unitType].disableVehicle ) then
 		frame.inVehicle = true
 		frame.unit = frame.vehicleUnit
 
@@ -386,7 +391,7 @@ function Units:CheckVehicleStatus(frame, event, unit)
 			frame.dataAttempts = 0
 			frame:SetScript("OnUpdate", checkVehicleData)
 		else
-			frame.unitGUID = UnitGUID(frame.unit)
+			frame.unitGUID = SafeUnitGUID(frame.unit)
 			frame:FullUpdate()
 		end
 
@@ -394,7 +399,7 @@ function Units:CheckVehicleStatus(frame, event, unit)
 	elseif( frame.inVehicle and ( not UnitHasVehicleUI(frame.unitOwner) or not UnitHasVehiclePlayerFrameUI(frame.unitOwner) or ShadowUF.db.profile.units[frame.unitType].disableVehicle ) ) then
 		frame.inVehicle = false
 		frame.unit = frame.unitOwner
-		frame.unitGUID = UnitExists(frame.unit) and UnitGUID(frame.unit) or nil
+		frame.unitGUID = UnitExists(frame.unit) and SafeUnitGUID(frame.unit) or nil
 		frame:FullUpdate()
 	end
 end
@@ -408,8 +413,13 @@ function Units:CheckUnitStatus(frame)
 		return
 	end
 
-	local guid = UnitGUID(frame.unit)
-	
+	local ok, guid = pcall(UnitGUID, frame.unit)
+	if not ok then
+		-- compound token (e.g. party1target) — can't get GUID in PvP, just update
+		frame:FullUpdate()
+		return
+	end
+
 	-- Global 'issecretvalue' check for both current and stored GUID
 	local checkSecret = _G.issecretvalue
 	local isSecret = checkSecret and checkSecret(guid)
@@ -440,7 +450,7 @@ end
 -- The argument from UNIT_PET is the pets owner, so the player summoning a new pet gets "player", party1 summoning a new pet gets "party1" and so on
 function Units:CheckPetUnitUpdated(frame, event, unit)
 	if( unit == frame.unitRealOwner and UnitExists(frame.unit) ) then
-		frame.unitGUID = UnitGUID(frame.unit)
+		frame.unitGUID = SafeUnitGUID(frame.unit)
 		frame:FullUpdate()
 	end
 end
@@ -452,10 +462,10 @@ function Units:CheckGroupedUnitStatus(frame)
 	if( frame.inVehicle and not UnitExists(frame.unit) and UnitExists(frame.unitOwner) ) then
 		frame.inVehicle = false
 		frame.unit = frame.unitOwner
-		frame.unitGUID = UnitGUID(frame.unit)
+		frame.unitGUID = SafeUnitGUID(frame.unit)
 		frame:FullUpdate()
 	elseif( UnitExists(frame.unit) ) then
-		frame.unitGUID = UnitGUID(frame.unit)
+		frame.unitGUID = SafeUnitGUID(frame.unit)
 		frame:FullUpdate()
 	end
 end
