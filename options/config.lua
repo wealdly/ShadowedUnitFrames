@@ -2413,6 +2413,27 @@ local function loadUnitOptions()
 						return not (cfg and cfg.enabled) or not (otherCfg and otherCfg.enabled) or (otherCfg and otherCfg.anchorOn)
 					end,
 				},
+				anchorMode = {
+					order = 1.6,
+					type = "select",
+					name = L["Anchor mode"],
+					desc = L["Controls how the anchored aura frame is positioned relative to the parent frame."],
+					values = {["COLUMN"] = L["New row"], ["SEQUENTIAL"] = L["Sequential"]},
+					get = function(info)
+						local auraType = info[#(info) - 2]
+						local cfg = getAuraFrameConfig(info[2], auraType, frameIndex)
+						return cfg and cfg.anchorMode or "COLUMN"
+					end,
+					set = function(info, value)
+						local auraType = info[#(info) - 2]
+						setAuraFrameValue(info[2], auraType, frameIndex, "anchorMode", value)
+					end,
+					hidden = function(info)
+						local auraType = info[#(info) - 2]
+						local cfg = getAuraFrameConfig(info[2], auraType, frameIndex)
+						return not (cfg and cfg.anchorOn)
+					end,
+				},
 				clickThrough = {
 					order = 1.7,
 					type = "toggle",

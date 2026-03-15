@@ -124,6 +124,9 @@ L["Anchor to"] = "Ancorar a"
 L["Anchor to another frame"] = "Ancorar a outra moldura"
 L["Anchor to buffs"] = "Ancorar aos buffs"
 L["Anchor to debuffs"] = "Ancorar aos debuffs"
+L["Controls how the anchored aura frame is positioned relative to the parent frame."] = "Controla como o quadro de auras ancorado é posicionado em relação ao quadro pai."
+L["New row"] = "Nova linha"
+L["Sequential"] = "Sequencial"
 L["Ancient Kings bar"] = "Barra dos Reis Antigos"
 L["Any auras shown in this indicator will have their total stack displayed."] = [=[Quaisquer auras mostradas neste indicador terão sua pilha total exibida.
 

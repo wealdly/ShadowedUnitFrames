@@ -475,32 +475,45 @@ function Auras:OnLayoutApplied(frame, config)
 
 	-- Setup anchor-to-anchor logic
 	frame.auras.anchorPairs = {}
-	
+
 	for i = 1, 6 do
 		local buffsConfig = config.auras.buffs and config.auras.buffs[i]
 		local debuffsConfig = config.auras.debuffs and config.auras.debuffs[i]
 		local buffsGroup = frame.auras["buffs" .. i]
 		local debuffsGroup = frame.auras["debuffs" .. i]
-		
+
+		-- Clear skipScan on both groups (may have been set by a previous layout)
+		if( buffsGroup ) then buffsGroup.skipScan = nil end
+		if( debuffsGroup ) then debuffsGroup.skipScan = nil end
+
 		if( buffsConfig and buffsConfig.enabled and debuffsConfig and debuffsConfig.enabled and buffsGroup and debuffsGroup ) then
+			local anchorOnConfig, parentGroup, childGroup, parentConfig, childConfig
 			if( buffsConfig.anchorOn ) then
-				-- Buffs anchored to Debuffs
-				frame.auras.anchorPairs[i] = {
-					parent = debuffsGroup,
-					child = buffsGroup,
-					parentConfig = debuffsConfig,
-					childConfig = buffsConfig
-				}
-				buffsGroup.forcedAnchorPoint = debuffsConfig.anchorPoint
+				anchorOnConfig = buffsConfig
+				parentGroup, childGroup = debuffsGroup, buffsGroup
+				parentConfig, childConfig = debuffsConfig, buffsConfig
 			elseif( debuffsConfig.anchorOn ) then
-				-- Debuffs anchored to Buffs
+				anchorOnConfig = debuffsConfig
+				parentGroup, childGroup = buffsGroup, debuffsGroup
+				parentConfig, childConfig = buffsConfig, debuffsConfig
+			end
+
+			if( anchorOnConfig ) then
+				local isSequential = (anchorOnConfig.anchorMode == "SEQUENTIAL")
 				frame.auras.anchorPairs[i] = {
-					parent = buffsGroup,
-					child = debuffsGroup,
-					parentConfig = buffsConfig,
-					childConfig = debuffsConfig
+					parent = parentGroup,
+					child = childGroup,
+					parentConfig = parentConfig,
+					childConfig = childConfig,
+					sequential = isSequential,
 				}
-				debuffsGroup.forcedAnchorPoint = buffsConfig.anchorPoint
+				childGroup.forcedAnchorPoint = parentConfig.anchorPoint
+
+				if( isSequential ) then
+					-- Sequential mode: child scans into parent group, expand parent capacity
+					parentGroup.maxAuras = parentGroup.maxAuras + childGroup.maxAuras
+					childGroup.skipScan = true
+				end
 			end
 		end
 	end
@@ -1200,7 +1213,7 @@ function Auras:Update(frame)
 				local groupKey = auraType .. i
 				local group = frame.auras[groupKey]
 
-				if( group and frameConfig and frameConfig.enabled ) then
+				if( group and frameConfig and frameConfig.enabled and not group.skipScan ) then
 					group.totalAuras = (frameConfig.temporary and frame.unit == "player") and group.temporaryEnchants or 0
 
 					-- Build the filter string based on configuration
@@ -1226,14 +1239,37 @@ function Auras:Update(frame)
 			end
 		end
 	end
-	
+
 	-- Apply anchor-to-anchor positioning for each configured pair
-	-- This dynamically anchors the child group to the last visible aura of the parent group
 	if( frame.auras.anchorPairs ) then
 		for i = 1, 6 do
 			local pair = frame.auras.anchorPairs[i]
-			if( pair and pair.parent and pair.child ) then
-				anchorGroupToGroup(frame, pair.parentConfig, pair.parent, pair.childConfig, pair.child)
+			if( pair ) then
+				if( pair.sequential ) then
+					-- Sequential mode: scan child auras into parent group (continuing after parent's auras)
+					local childAuraType = pair.child.auraType
+					local baseFilter = childAuraType == "buffs" and "HELPFUL" or "HARMFUL"
+					local filterValue = pair.childConfig.filter or "ALL"
+					local effectiveFilter = filterValue ~= "ALL" and (baseFilter .. "|" .. filterValue) or baseFilter
+
+					-- Use parentConfig as displayConfig so buttons share the same size/style
+					local ok, err = pcall(scan, frame.auras, pair.parent, childAuraType, pair.childConfig, pair.parentConfig, effectiveFilter)
+					if not ok and not pair.parent.hasErrored then
+						ShadowUF:Print("Error scanning sequential auras (logged once): " .. tostring(err))
+						pair.parent.hasErrored = true
+					end
+
+					-- Flow layout: reposition if enlarged auras present after sequential scan
+					if( pair.parentConfig.enlarge and pair.parentConfig.enlarge.PLAYER and pair.parent.totalAuras > 0 ) then
+						positionAllButtons(pair.parent, pair.parentConfig)
+					end
+
+					-- Hide unused child group buttons
+					for j = 1, #(pair.child.buttons) do pair.child.buttons[j]:Hide() end
+				elseif( pair.parent and pair.child ) then
+					-- Column mode: anchor child group below/after parent group
+					anchorGroupToGroup(frame, pair.parentConfig, pair.parent, pair.childConfig, pair.child)
+				end
 			end
 		end
 	end
