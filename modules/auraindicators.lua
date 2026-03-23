@@ -335,6 +335,7 @@ local function scanAuras(frame, filter, type)
 					end
 
 					auraList[name] = true
+					if spellID then auraList[tostring(spellID)] = true end
 				end
 			end)
 		end
