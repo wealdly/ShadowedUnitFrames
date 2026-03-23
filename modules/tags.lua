@@ -926,10 +926,11 @@ Tags.defaultTags = {
 		return server ~= "" and server or nil
 	end]],
 	["perhp"] = [[function(unit, unitOwner)
-		if UnitIsDead(unit) or UnitIsGhost(unit) or not UnitIsConnected(unit) then
-			return "0%"
+		if( UnitIsDead(unit) ) then return ShadowUF.L["Dead"]
+		elseif( UnitIsGhost(unit) ) then return ShadowUF.L["Ghost"]
+		elseif( not UnitIsConnected(unit) ) then return ShadowUF.L["Offline"]
 		end
-	
+
 		local percent = UnitHealthPercent(unit, true, CurveConstants and CurveConstants.ScaleTo100 or 100) -- Fallback if CurveConstants missing? Usually present.
 		if percent then
 			return ("%d%%"):format(percent)
