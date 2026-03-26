@@ -642,11 +642,22 @@ local privateAuraUnits = {
 	raid = true,
 }
 
+-- Defer private aura operations to after combat (APIs blocked in combat since 12.0.1)
+local pendingBossDebuffFrames = {}
+local bossDebuffsDeferFrame = CreateFrame("Frame")
+bossDebuffsDeferFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+bossDebuffsDeferFrame:SetScript("OnEvent", function()
+	for frame in pairs(pendingBossDebuffFrames) do
+		Auras:UpdateBossDebuffs(frame)
+	end
+	wipe(pendingBossDebuffFrames)
+end)
+
 function Auras:ClearBossDebuffs(frame)
 	if not frame.bossDebuffs then return end
 
 	local anchors = frame.bossDebuffs.anchorIDs
-	if anchors and RemovePrivateAuraAnchor then
+	if anchors and RemovePrivateAuraAnchor and not InCombatLockdown() then
 		for i = 1, #anchors do
 			if anchors[i] then
 				RemovePrivateAuraAnchor(anchors[i])
@@ -734,6 +745,11 @@ function Auras:UpdateBossDebuffs(frame)
 	end
 
 	if not AddPrivateAuraAnchor then return end
+
+	if InCombatLockdown() then
+		pendingBossDebuffFrames[frame] = true
+		return
+	end
 
 	local unit = frame.unit
 	if not unit then

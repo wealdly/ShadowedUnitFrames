@@ -2851,6 +2851,11 @@ local function loadUnitOptions()
 
 	-- Boss Debuffs (Private Auras) configuration
 	-- Uses Blizzard's secure AddPrivateAuraAnchor API for friendly units
+	local function getBossDebuffsCfg(info)
+		local unitCfg = ShadowUF.db.profile.units[info[2]]
+		return unitCfg and unitCfg.auras and unitCfg.auras.bossDebuffs
+	end
+
 	Config.bossDebuffsTable = {
 		type = "group",
 		name = L["Boss Debuffs"],
@@ -2858,7 +2863,6 @@ local function loadUnitOptions()
 		hidden = function(info)
 			-- Private auras only work with stable unit tokens (player, party, raid)
 			local unit = info[2]
-			if unit == "global" then return false end
 			return unit ~= "player" and unit ~= "party" and unit ~= "raid"
 		end,
 		args = {
@@ -2873,12 +2877,12 @@ local function loadUnitOptions()
 				name = L["Enable"],
 				width = "half",
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.enabled
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.enabled = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.enabled = value; ShadowUF.Layout:Reload() end
 				end,
 			},
 			anchorPoint = {
@@ -2889,15 +2893,15 @@ local function loadUnitOptions()
 					return ShadowUF.db.profile.advanced and advancedAuraList or defaultAuraList
 				end,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.anchorPoint or "C"
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.anchorPoint = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.anchorPoint = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2907,15 +2911,15 @@ local function loadUnitOptions()
 				name = L["Icon Size"],
 				min = 16, max = 64, step = 1,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.size or 32
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.size = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.size = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2925,15 +2929,15 @@ local function loadUnitOptions()
 				name = L["Per row"],
 				min = 1, max = 10, step = 1,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.perRow or 3
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.perRow = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.perRow = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2943,15 +2947,15 @@ local function loadUnitOptions()
 				name = L["Max rows"],
 				min = 1, max = 5, step = 1,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.maxRows or 1
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.maxRows = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.maxRows = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2961,15 +2965,15 @@ local function loadUnitOptions()
 				name = L["X Offset"],
 				min = -200, max = 200, step = 1, softMin = -100, softMax = 100,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.x or 0
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.x = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.x = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2979,15 +2983,15 @@ local function loadUnitOptions()
 				name = L["Y Offset"],
 				min = -200, max = 200, step = 1, softMin = -100, softMax = 100,
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.y or 0
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.y = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.y = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -2996,15 +3000,15 @@ local function loadUnitOptions()
 				type = "toggle",
 				name = L["Show cooldown"],
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.showCooldown ~= false
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.showCooldown = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.showCooldown = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
@@ -3013,15 +3017,15 @@ local function loadUnitOptions()
 				type = "toggle",
 				name = L["Show cooldown numbers"],
 				get = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return cfg and cfg.showCooldownNumbers ~= false
 				end,
 				set = function(info, value)
-					ShadowUF.db.profile.units[info[2]].auras.bossDebuffs.showCooldownNumbers = value
-					ShadowUF.Layout:Reload()
+					local cfg = getBossDebuffsCfg(info)
+					if cfg then cfg.showCooldownNumbers = value; ShadowUF.Layout:Reload() end
 				end,
 				disabled = function(info)
-					local cfg = ShadowUF.db.profile.units[info[2]].auras.bossDebuffs
+					local cfg = getBossDebuffsCfg(info)
 					return not (cfg and cfg.enabled)
 				end,
 			},
