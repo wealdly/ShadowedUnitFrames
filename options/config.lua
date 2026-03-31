@@ -2525,6 +2525,13 @@ local function loadUnitOptions()
 					end,
 					set = function(info, value)
 						local auraType = info[#(info) - 2]
+						-- Disable enlarge.PLAYER when switching to PLAYER filter
+						if value == "PLAYER" then
+							local cfg = getAuraFrameConfig(info[2], auraType, frameIndex)
+							if cfg and cfg.enlarge then
+								cfg.enlarge.PLAYER = false
+							end
+						end
 						setAuraFrameValue(info[2], auraType, frameIndex, "filter", value)
 					end,
 					disabled = function(info)
