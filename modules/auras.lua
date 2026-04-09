@@ -624,13 +624,15 @@ function Auras:OnLayoutApplied(frame, config)
 end
 
 -- Private Auras (Boss Debuffs) support
--- Current implementation only works with stable unit tokens (player, party, raid)
+-- Only works with stable unit tokens (player, party, raid, maintank, mainassist)
 local AddPrivateAuraAnchor = C_UnitAuras and C_UnitAuras.AddPrivateAuraAnchor
 local RemovePrivateAuraAnchor = C_UnitAuras and C_UnitAuras.RemovePrivateAuraAnchor
 local privateAuraUnits = {
 	player = true,
 	party = true,
 	raid = true,
+	maintank = true,
+	mainassist = true,
 }
 
 -- Defer private aura operations to after combat (APIs blocked in combat since 12.0.1)
@@ -1058,27 +1060,18 @@ local function renderAura(parent, frame, type, config, displayConfig, index, fil
 	local button = frame.buttons[frame.totalAuras]
 	if( isRemovable and not config.disableRemovableColor ) then
 		button.border:SetVertexColor(ShadowUF.db.profile.auraColors.removable.r, ShadowUF.db.profile.auraColors.removable.g, ShadowUF.db.profile.auraColors.removable.b)
-	elseif( true ) then
-		-- 12.0: GetAuraDispelTypeColor to color auras.
-		if( C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil ) then
-			local curve = Auras:GetDispelColorCurve(type)
-			if( curve ) then
-				local color = C_UnitAuras.GetAuraDispelTypeColor(frame.parent.unit, auraInstanceID, curve)
-				if( color ) then
-					button.border:SetVertexColor(color:GetRGB())
-				else
-					if( type == "buffs" ) then
-						button.border:SetVertexColor(0.6, 0.6, 0.6)
-					else
-						button.border:SetVertexColor(0.8, 0, 0)
-					end
-				end
+	else
+		local curve = C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Auras:GetDispelColorCurve(type)
+		if( curve ) then
+			local color = C_UnitAuras.GetAuraDispelTypeColor(frame.parent.unit, auraInstanceID, curve)
+			button.border:SetVertexColorFromBoolean(true, color, color)
+		else
+			if( type == "buffs" ) then
+				button.border:SetVertexColor(0.6, 0.6, 0.6)
 			else
 				button.border:SetVertexColor(0.8, 0, 0)
 			end
 		end
-	else
-		button.border:SetVertexColor(0.60, 0.60, 0.60)
 	end
 
 	-- Show the cooldown ring
@@ -1219,8 +1212,8 @@ end
 -- Scan for auras
 -- Helper: process a single auraData and call renderAura
 local function processAura(parent, frame, type, config, displayConfig, filter, unit, isFriendly, curable, index, auraData)
-	local name = auraData.name or "Unknown"
-	local texture = auraData.icon or "Interface\\Icons\\INV_Misc_QuestionMark"
+	local name = auraData.name
+	local texture = auraData.icon
 	local count = auraData.applications
 	local durationObject = auraData
 	local filterStrings = (type == "debuffs") and FILTER_STRINGS.HARMFUL or FILTER_STRINGS.HELPFUL
