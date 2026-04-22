@@ -812,6 +812,7 @@ function Auras:UpdateBossDebuffs(frame)
 			parent = container,
 			showCountdownFrame = config.showCooldown ~= false,
 			showCountdownNumbers = config.showCooldownNumbers ~= false,
+			isContainer = false,
 			iconInfo = {
 				iconWidth = iconSize,
 				iconHeight = iconSize,
