@@ -1145,15 +1145,13 @@ local function renderAura(parent, frame, type, config, displayConfig, index, fil
 		button.border:SetVertexColor(ShadowUF.db.profile.auraColors.removable.r, ShadowUF.db.profile.auraColors.removable.g, ShadowUF.db.profile.auraColors.removable.b)
 	else
 		local curve = C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Auras:GetDispelColorCurve(type)
-		if( curve ) then
-			local color = C_UnitAuras.GetAuraDispelTypeColor(frame.parent.unit, auraInstanceID, curve)
+		local color = curve and C_UnitAuras.GetAuraDispelTypeColor(frame.parent.unit, auraInstanceID, curve)
+		if( color ) then
 			button.border:SetVertexColorFromBoolean(true, color, color)
+		elseif( type == "buffs" ) then
+			button.border:SetVertexColor(0.6, 0.6, 0.6)
 		else
-			if( type == "buffs" ) then
-				button.border:SetVertexColor(0.6, 0.6, 0.6)
-			else
-				button.border:SetVertexColor(0.8, 0, 0)
-			end
+			button.border:SetVertexColor(0.8, 0, 0)
 		end
 	end
 
