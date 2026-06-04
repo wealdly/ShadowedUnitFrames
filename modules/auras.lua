@@ -757,6 +757,10 @@ function Auras:SetupBossDebuffs(frame, config)
 		frame.bossDebuffs.anchorIDs = {}
 		frame.bossDebuffs.testButtons = {}
 		frame.bossDebuffs.container = CreateFrame("Frame", nil, frame.highFrame)
+		-- 12.0.5, private aura icons ignore frame level on re-apply and end up
+		-- behind the parent unit frame. Bumping the container's strata above the unit frame's
+		-- strata ("LOW") keeps icons on top regardless of level.
+		frame.bossDebuffs.container:SetFrameStrata("MEDIUM")
 	end
 
 	local container = frame.bossDebuffs.container
