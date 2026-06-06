@@ -353,10 +353,10 @@ function Indicators:UpdateFlags(frame)
 end
 
 function Indicators:OnEnable(frame)
-	-- Forces the indicators to be above the bars/portraits/etc
+	-- Forces the indicators to be above the bars/portraits/heal prediction bars, etc
 	if( not frame.indicators ) then
 		frame.indicators = CreateFrame("Frame", nil, frame)
-		frame.indicators:SetFrameLevel(frame.topFrameLevel + 2)
+		frame.indicators:SetFrameLevel(frame.topFrameLevel + 6)
 	end
 
 	-- Now lets enable all the indicators
