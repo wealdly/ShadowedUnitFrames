@@ -213,13 +213,41 @@ local function createConfigEnv()
 end
 
 -- Child units have to manually be added to the list to make sure they function properly
+-- For the party header in placeholder mode, the 5th SGH child is always created (via startingIndex=-4) and represents the player slot when units.party.showPlayer is on.
 local function prepareChildUnits(header, ...)
+	local isParty = header.unitType == "party"
+	local showPlayer = isParty and ShadowUF.db.profile.units.party.showPlayer
+
 	for i=1, select("#", ...) do
 		local frame = select(i, ...)
-		if( frame.unitType and not frame.configUnitID ) then
-			ShadowUF.Units.frameList[frame] = true
-			frame.configUnitID = header.groupID and (header.groupID * 5) - 5 + i or i
-			frame:SetAttribute("unit", ShadowUF[header.unitMappedType .. "Units"][frame.configUnitID])
+		if( frame.unitType ) then
+			if( isParty and i == 5 ) then
+				-- The extra slot used to mirror the live showPlayer behavior.
+				-- We use a fake "party5" unit so testConfigEnv's digit-stripping routes API calls through the "party" testModeUnits entry and the standalone player frame stays unaffected.
+				ShadowUF.Units.frameList[frame] = true
+				frame.placeholderUnit = "party5"
+				frame:SetAttribute("unit", "party5")
+
+				if( showPlayer ) then
+					if( frame.isPlaceholderHidden ) then
+						frame.isPlaceholderHidden = nil
+						frame:SetAttribute("statehidden", nil)
+						UnregisterUnitWatch(frame)
+						frame:SetAttribute("state-unitexists", true)
+						frame:FullUpdate()
+						frame:Show()
+					end
+				else
+					frame.isPlaceholderHidden = true
+					frame:SetAttribute("statehidden", true)
+					UnregisterUnitWatch(frame)
+					frame:Hide()
+				end
+			elseif( not frame.configUnitID and not frame.placeholderUnit ) then
+				ShadowUF.Units.frameList[frame] = true
+				frame.configUnitID = header.groupID and (header.groupID * 5) - 5 + i or i
+				frame:SetAttribute("unit", ShadowUF[header.unitMappedType .. "Units"][frame.configUnitID])
+			end
 		end
 	end
 end
@@ -242,12 +270,12 @@ local function setupUnits(childrenOnly)
 	for frame in pairs(ShadowUF.Units.frameList) do
 		if( frame.configMode ) then
 			-- Units visible, but it's not supposed to be
-			if( frame:IsVisible() and not ShadowUF.db.profile.units[frame.unitType].enabled ) then
+			if( frame:IsVisible() and ( not ShadowUF.db.profile.units[frame.unitType].enabled or frame.isPlaceholderHidden ) ) then
 				RegisterUnitWatch(frame, frame.hasStateWatch)
 				if( not UnitExists(frame.unit) ) then frame:Hide() end
 
 			-- Unit's not visible and it's enabled so it should
-			elseif( not frame:IsVisible() and ShadowUF.db.profile.units[frame.unitType].enabled ) then
+			elseif( not frame.isPlaceholderHidden and not frame:IsVisible() and ShadowUF.db.profile.units[frame.unitType].enabled ) then
 				UnregisterUnitWatch(frame)
 
 				frame:SetAttribute("state-unitexists", true)
@@ -273,7 +301,9 @@ local function setupUnits(childrenOnly)
 			frame.menu = nil
 
 			local unit
-			if( frame.isChildUnit ) then
+			if( frame.placeholderUnit ) then
+				unit = frame.placeholderUnit
+			elseif( frame.isChildUnit ) then
 				local unitFormat = string.gsub(string.gsub(frame.unitType, "target$", "%%dtarget"), "pet$", "pet%%d")
 				unit = string.format(unitFormat, frame.parent.configUnitID or "")
 			else
@@ -288,7 +318,11 @@ local function setupUnits(childrenOnly)
 
 			UnregisterUnitWatch(frame)
 			frame:FullUpdate()
-			frame:Show()
+			if( frame.isPlaceholderHidden ) then
+				frame:Hide()
+			else
+				frame:Show()
+			end
 		end
 	end
 end
@@ -349,7 +383,9 @@ function Movers:Enable()
 
 			header:SetAttribute("startingIndex", -math.min(config.maxColumns * config.unitsPerColumn, maxUnits) + 1)
 		elseif( ShadowUF[header.unitType .. "Units"] ) then
-			header:SetAttribute("startingIndex", -#(ShadowUF[header.unitType .. "Units"]) + 1)
+			-- Party gets an extra slot to host the placeholder player frame
+			local extra = (header.unitType == "party") and 1 or 0
+			header:SetAttribute("startingIndex", -#(ShadowUF[header.unitType .. "Units"]) + 1 - extra)
 		end
 
 		header.startingIndex = header:GetAttribute("startingIndex")
@@ -420,6 +456,12 @@ function Movers:Disable()
 			frame.unitOwner = nil
 			frame.unit = nil
 			frame.configUnitID = nil
+			frame.placeholderUnit = nil
+			if( frame.isPlaceholderHidden ) then
+				frame.isPlaceholderHidden = nil
+				frame:SetAttribute("statehidden", nil)
+				frame:Show()
+			end
 			frame.menu = frame.originalMenu
 			frame.originalMenu = nil
 			frame.Hide = frame.originalHide
@@ -579,7 +621,9 @@ function Movers:EnableTestMode(unitType)
 				end
 				header:SetAttribute("startingIndex", -math.min(config.maxColumns * config.unitsPerColumn, maxUnits) + 1)
 			elseif( ShadowUF[unitType .. "Units"] ) then
-				header:SetAttribute("startingIndex", -#(ShadowUF[unitType .. "Units"]) + 1)
+				-- Party gets an extra slot to host the placeholder player frame
+				local extra = (unitType == "party") and 1 or 0
+				header:SetAttribute("startingIndex", -#(ShadowUF[unitType .. "Units"]) + 1 - extra)
 			end
 
 			header.startingIndex = header:GetAttribute("startingIndex")
@@ -596,7 +640,9 @@ function Movers:EnableTestMode(unitType)
 			frame.unitOwner = nil
 
 			local unit
-			if( frame.isChildUnit ) then
+			if( frame.placeholderUnit ) then
+				unit = frame.placeholderUnit
+			elseif( frame.isChildUnit ) then
 				local unitFormat = string.gsub(string.gsub(unitType, "target$", "%%dtarget"), "pet$", "pet%%d")
 				unit = string.format(unitFormat, frame.parent and frame.parent.configUnitID or "")
 			else
@@ -614,7 +660,11 @@ function Movers:EnableTestMode(unitType)
 
 			UnregisterUnitWatch(frame)
 			frame:FullUpdate()
-			frame:Show()
+			if( frame.isPlaceholderHidden ) then
+				frame:Hide()
+			else
+				frame:Show()
+			end
 		end
 	end
 end
@@ -630,6 +680,13 @@ function Movers:DisableTestMode(unitType)
 			frame.configMode = nil
 			frame.unitOwner = nil
 			frame.unit = nil
+			frame.configUnitID = nil
+			frame.placeholderUnit = nil
+			if( frame.isPlaceholderHidden ) then
+				frame.isPlaceholderHidden = nil
+				frame:SetAttribute("statehidden", nil)
+				frame:Show()
+			end
 			frame:SetAttribute("unit", frame.originalUnit)
 			frame:SetScript("OnEvent", frame:IsVisible() and ShadowUF.Units.OnEvent or nil)
 			frame:SetScript("OnUpdate", frame.originalOnUpdate)
@@ -743,8 +800,17 @@ end
 function Movers:Update()
 	if( not ShadowUF.db.profile.locked ) then
 		self:Enable()
-	elseif( ShadowUF.db.profile.locked ) then
+	else
 		self:Disable()
+
+		if( next(self.testModeUnits) ) then
+			local snapshot = {}
+			for unitType in pairs(self.testModeUnits) do snapshot[unitType] = true end
+			for unitType in pairs(snapshot) do
+				self:DisableTestMode(unitType)
+				self:EnableTestMode(unitType)
+			end
+		end
 	end
 end
 
