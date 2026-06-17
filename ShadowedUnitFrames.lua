@@ -5,7 +5,7 @@
 ShadowUF = select(2, ...)
 
 local L = ShadowUF.L
-ShadowUF.dbRevision = 69
+ShadowUF.dbRevision = 70
 ShadowUF.playerUnit = "player"
 ShadowUF.enabledUnits = {}
 ShadowUF.modules = {}
@@ -452,6 +452,15 @@ function ShadowUF:CheckUpgrade()
 					end
 				end
 			end
+		end
+	end
+	if( revision <= 69 ) then
+		local f = self.db.profile.font
+		if( f ) then
+			if( f.shadowEnabled == nil ) then f.shadowEnabled = true end
+			if( not f.shadowColor ) then f.shadowColor = {r = 0, g = 0, b = 0, a = 1} end
+			if( f.shadowX == nil ) then f.shadowX = 1.0 end
+			if( f.shadowY == nil ) then f.shadowY = -1.0 end
 		end
 	end
 end

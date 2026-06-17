@@ -108,6 +108,7 @@ function ShadowUF:LoadDefaultLayout(useMerge)
 		name = "Myriad Condensed Web",
 		size = 11,
 		extra = "",
+		shadowEnabled = true,
 		shadowColor = {r = 0, g = 0, b = 0, a = 1},
 		color = {r = 1, g = 1, b = 1, a = 1},
 		shadowX = 1.00,

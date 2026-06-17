@@ -44,6 +44,13 @@ function Combat:Update(frame, event, unit, type, ...)
 	local scale = frame.combatText.feedbackText:GetStringHeight() / ShadowUF.db.profile.font.size
 	if( scale > 0 ) then
 		frame.combatText:SetScale(scale)
-		frame.combatText.feedbackText:SetFont(frame.combatText.fontPath, ShadowUF.db.profile.font.size, "OUTLINE")
+		local cf = ShadowUF.db.profile.font
+		local cr, cg, cb, ca = frame.combatText.feedbackText:GetTextColor()
+		if( cf.shadowEnabled and cf.shadowColor and cf.shadowX and cf.shadowY ) then
+			ShadowUF:SetFontAndShadow(frame.combatText.feedbackText, frame.combatText.fontPath, cf.size, "OUTLINE", cf.shadowColor.r, cf.shadowColor.g, cf.shadowColor.b, cf.shadowColor.a, cf.shadowX, cf.shadowY)
+		else
+			ShadowUF:SetFontAndShadow(frame.combatText.feedbackText, frame.combatText.fontPath, cf.size, "OUTLINE")
+		end
+		if( cr ) then frame.combatText.feedbackText:SetTextColor(cr, cg, cb, ca) end
 	end
 end
