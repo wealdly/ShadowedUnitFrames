@@ -2355,19 +2355,32 @@ local function loadUnitOptions()
 
 	-- Helper to get frame config (auras.buffs[1], auras.debuffs[2], etc.)
 	local function getAuraFrameConfig(unit, auraType, frameIndex)
-		local config = ShadowUF.db.profile.units[unit]
+		local config = unit == "global" and globalConfig or ShadowUF.db.profile.units[unit]
 		if config and config.auras and config.auras[auraType] and config.auras[auraType][frameIndex] then
 			return config.auras[auraType][frameIndex]
 		end
 		return nil
 	end
 
-	local function setAuraFrameValue(unit, auraType, frameIndex, key, value)
-		local config = ShadowUF.db.profile.units[unit]
-		if config and config.auras and config.auras[auraType] and config.auras[auraType][frameIndex] then
-			config.auras[auraType][frameIndex][key] = value
-			reloadUnitAuras()
+	-- Apply mutator(frameConfig) to one unit's aura frame, fanning out across the
+	-- globally-selected units (+ the globalConfig mirror) when unit == "global".
+	local function modifyAuraFrame(unit, auraType, frameIndex, mutator)
+		local function apply(u)
+			local fc = getAuraFrameConfig(u, auraType, frameIndex)
+			if( fc ) then mutator(fc) end
 		end
+
+		if( unit == "global" ) then
+			for modUnit in pairs(modifyUnits) do apply(modUnit) end
+			apply("global")
+		else
+			apply(unit)
+		end
+		reloadUnitAuras()
+	end
+
+	local function setAuraFrameValue(unit, auraType, frameIndex, key, value)
+		modifyAuraFrame(unit, auraType, frameIndex, function(fc) fc[key] = value end)
 	end
 
 	-- Create options for a single aura frame slot
@@ -2576,14 +2589,11 @@ local function loadUnitOptions()
 					end,
 					set = function(info, value)
 						local auraType = info[#(info) - 2]
-						-- Disable enlarge.PLAYER when switching to PLAYER filter
-						if value == "PLAYER" then
-							local cfg = getAuraFrameConfig(info[2], auraType, frameIndex)
-							if cfg and cfg.enlarge then
-								cfg.enlarge.PLAYER = false
-							end
-						end
-						setAuraFrameValue(info[2], auraType, frameIndex, "filter", value)
+						modifyAuraFrame(info[2], auraType, frameIndex, function(fc)
+							-- Disable enlarge.PLAYER when switching to PLAYER filter
+							if( value == "PLAYER" and fc.enlarge ) then fc.enlarge.PLAYER = false end
+							fc.filter = value
+						end)
 					end,
 					disabled = function(info)
 						local auraType = info[#(info) - 2]
@@ -2874,11 +2884,9 @@ local function loadUnitOptions()
 					end,
 					set = function(info, r, g, b, a)
 						local auraType = info[#(info) - 2]
-						local config = ShadowUF.db.profile.units[info[2]]
-						if config and config.auras and config.auras[auraType] and config.auras[auraType][frameIndex] then
-							config.auras[auraType][frameIndex].cooldownFontColor = {r = r, g = g, b = b, a = a}
-							reloadUnitAuras()
-						end
+						modifyAuraFrame(info[2], auraType, frameIndex, function(fc)
+							fc.cooldownFontColor = {r = r, g = g, b = b, a = a}
+						end)
 					end,
 					disabled = function(info)
 						local auraType = info[#(info) - 2]
@@ -2904,12 +2912,10 @@ local function loadUnitOptions()
 					end,
 					set = function(info, value)
 						local auraType = info[#(info) - 2]
-						local config = ShadowUF.db.profile.units[info[2]]
-						if config and config.auras and config.auras[auraType] and config.auras[auraType][frameIndex] then
-							config.auras[auraType][frameIndex].enlarge = config.auras[auraType][frameIndex].enlarge or {}
-							config.auras[auraType][frameIndex].enlarge.PLAYER = value
-							reloadUnitAuras()
-						end
+						modifyAuraFrame(info[2], auraType, frameIndex, function(fc)
+							fc.enlarge = fc.enlarge or {}
+							fc.enlarge.PLAYER = value
+						end)
 					end,
 					disabled = function(info)
 						local auraType = info[#(info) - 2]
@@ -3367,19 +3373,32 @@ local function loadUnitOptions()
 				width = "half",
 				hidden = isModifiersSet,
 				get = function(info)
+					if( info[2] == "global" ) then
+						-- On only when every globally-selected unit is in test mode
+						for modUnit in pairs(modifyUnits) do
+							local cfg = ShadowUF.db.profile.units[modUnit]
+							if( not (cfg and cfg.auras and cfg.auras.testMode) ) then return false end
+						end
+						return next(modifyUnits) ~= nil
+					end
 					local cfg = ShadowUF.db.profile.units[info[2]]
 					return cfg and cfg.auras and cfg.auras.testMode
 				end,
 				set = function(info, value)
-					local unitType = info[2]
-					local cfg = ShadowUF.db.profile.units[unitType]
-					if cfg and cfg.auras then
-						cfg.auras.testMode = value
+					local function apply(unitType)
+						local cfg = ShadowUF.db.profile.units[unitType]
+						if( cfg and cfg.auras ) then cfg.auras.testMode = value end
+						if( value ) then
+							ShadowUF.modules.movers:EnableTestMode(unitType)
+						else
+							ShadowUF.modules.movers:DisableTestMode(unitType)
+						end
 					end
-					if value then
-						ShadowUF.modules.movers:EnableTestMode(unitType)
+
+					if( info[2] == "global" ) then
+						for modUnit in pairs(modifyUnits) do apply(modUnit) end
 					else
-						ShadowUF.modules.movers:DisableTestMode(unitType)
+						apply(info[2])
 					end
 				end,
 			},

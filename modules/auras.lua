@@ -484,6 +484,14 @@ local function updateButton(id, group, config)
 		button.icon = button:CreateTexture(nil, "BACKGROUND")
 		button.icon:SetAllPoints(button)
 		button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+		-- Mask the icon artwork to rounded corners so it doesn't poke past the border.
+		-- The atlas has transparent padding, so the mask is oversized (size set below) and
+		-- centered, otherwise the artwork gets clipped well inside the frame.
+		button.iconMask = button:CreateMaskTexture(nil, "BACKGROUND")
+		button.iconMask:SetPoint("CENTER", button, "CENTER", 0, 0)
+		button.iconMask:SetAtlas("UI-HUD-ActionBar-IconFrame-Mask", false)
+		button.icon:AddMaskTexture(button.iconMask)
 	end
 
 	if( ShadowUF.db.profile.auras.borderType == "" ) then
@@ -507,6 +515,8 @@ local function updateButton(id, group, config)
 	button:SetWidth(config.size)
 	button.border:SetHeight(config.size + 1)
 	button.border:SetWidth(config.size + 1)
+	local maskSize = math.floor((config.size * 1.5) + 0.5)
+	button.iconMask:SetSize(maskSize, maskSize)
 	ShadowUF:SetFontAndShadow(button.stack, "Interface\\AddOns\\ShadowedUnitFrames\\media\\fonts\\Myriad Condensed Web.ttf", math.floor((config.size * 0.60) + 0.5), "OUTLINE", 0, 0, 0, 1.0, 0.50, -0.50)
 
 	-- Click-through: disable mouse clicks but keep mouse motion (tooltips)
@@ -657,9 +667,9 @@ function Auras:OnLayoutApplied(frame, config)
 		local buffsGroup = frame.auras["buffs" .. i]
 		local debuffsGroup = frame.auras["debuffs" .. i]
 
-		-- Clear skipScan on both groups (may have been set by a previous layout)
-		if( buffsGroup ) then buffsGroup.skipScan = nil end
-		if( debuffsGroup ) then debuffsGroup.skipScan = nil end
+		-- Clear skipScan and forced anchor overrides on both groups (may have been set by a previous layout)
+		if( buffsGroup ) then buffsGroup.skipScan = nil; buffsGroup.forcedAnchorPoint = nil; buffsGroup.forcedGrowH = nil; buffsGroup.forcedGrowV = nil end
+		if( debuffsGroup ) then debuffsGroup.skipScan = nil; debuffsGroup.forcedAnchorPoint = nil; debuffsGroup.forcedGrowH = nil; debuffsGroup.forcedGrowV = nil end
 
 		if( buffsConfig and buffsConfig.enabled and debuffsConfig and debuffsConfig.enabled and buffsGroup and debuffsGroup ) then
 			local anchorOnConfig, parentGroup, childGroup, parentConfig, childConfig
@@ -1126,17 +1136,20 @@ end
 
 -- 12.0: categorizeAura function removed - filtering is now done via API filters directly
 
+-- The frame config that drives button layout: always the group's OWN frame config, so that
+-- sequentially-appended child auras flow using the parent's layout instead of their own.
+local function getLayoutConfig(frame, fallback)
+	local unitConfig = ShadowUF.db.profile.units[frame.parent.unitType]
+	local auraConfig = unitConfig and unitConfig.auras[frame.type]
+	return (auraConfig and auraConfig[frame.frameIndex or 1]) or fallback
+end
+
 local function renderAura(parent, frame, type, config, displayConfig, index, filter, isFriendly, curable, name, texture, count, auraType, durationObject, caster, isRemovable, nameplateShowPersonal, spellID, canApplyAura, isPlayerAura, auraInstanceID)
 
 	-- Create any buttons we need
 	frame.totalAuras = frame.totalAuras + 1
 	if( #(frame.buttons) < frame.totalAuras ) then
-		-- Get the correct config for this frame
-		local unitConfig = ShadowUF.db.profile.units[frame.parent.unitType]
-		local auraConfig = unitConfig.auras[frame.type]
-		local frameIndex = frame.frameIndex or 1
-		local frameConfig = auraConfig and auraConfig[frameIndex] or config
-		updateButton(frame.totalAuras, frame, frameConfig)
+		updateButton(frame.totalAuras, frame, getLayoutConfig(frame, config))
 	end
 
 	-- Show debuff border, or a special colored border if it's stealable
@@ -1205,7 +1218,15 @@ end
 local function scanConfigMode(parent, frame, type, config, displayConfig, filter)
 	local testCount = config.perRow * config.maxRows
 	local isBuff = (type == "buffs")
-	
+
+	-- Preview aid: when this group is the parent of a sequential pair, leave the last row
+	-- partly empty so the appended child auras visibly continue the same queue. A full grid
+	-- always wraps to a new row, making sequential look identical to "new row" mode.
+	local pair = frame.parent.auras and frame.parent.auras.anchorPairs and frame.parent.auras.anchorPairs[frame.frameIndex or 0]
+	if( pair and pair.sequential and pair.parent == frame and type == frame.type ) then
+		testCount = math.max(1, testCount - math.floor(config.perRow / 2))
+	end
+
 	for i = 1, testCount do
 		local mod = i % 5
 		local auraType = mod == 0 and "Magic" or mod == 1 and "Curse" or mod == 2 and "Poison" or mod == 3 and "Disease" or ""
@@ -1222,11 +1243,11 @@ local function scanConfigMode(parent, frame, type, config, displayConfig, filter
 		-- Create any buttons we need
 		frame.totalAuras = frame.totalAuras + 1
 		if( #(frame.buttons) < frame.totalAuras ) then
-			updateButton(frame.totalAuras, frame, config)
+			updateButton(frame.totalAuras, frame, getLayoutConfig(frame, config))
 		end
-		
+
 		local button = frame.buttons[frame.totalAuras]
-		
+
 		-- Set border color based on aura type
 		if( isRemovable and not isBuff and not config.disableRemovableColor ) then
 			button.border:SetVertexColor(ShadowUF.db.profile.auraColors.removable.r, ShadowUF.db.profile.auraColors.removable.g, ShadowUF.db.profile.auraColors.removable.b)
