@@ -81,3 +81,4 @@ modules\priest.lua
 modules\shaman.lua
 modules\arcanecharges.lua
 modules\essence.lua
+modules\auracancel.lua

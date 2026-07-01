@@ -438,20 +438,6 @@ local function hideTooltip(self)
 	end
 end
 
-local function cancelAura(self, mouseButton)
-	if( mouseButton ~= "RightButton" ) then return end
-	if( InCombatLockdown() ) then return end
-	if( not self.filter or not self.filter:find("HELPFUL") ) then return end
-	if( not self.unit or not UnitIsUnit(self.unit, "player") ) then return end
-	
-	if( self.auraInstanceID ) then
-		local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID("player", self.auraInstanceID)
-		if( auraData and auraData.name ) then
-			CancelSpellByName(auraData.name)
-		end
-	end
-end
-
 local function updateButton(id, group, config)
 	local button = group.buttons[id]
 	if( not button ) then
@@ -460,7 +446,6 @@ local function updateButton(id, group, config)
 		button = group.buttons[id]
 		button:SetScript("OnEnter", showTooltip)
 		button:SetScript("OnLeave", hideTooltip)
-		button:RegisterForClicks("RightButtonUp")
 
 		button.cooldown = CreateFrame("Cooldown", group.parent:GetName() .. "Aura" .. group.type .. id .. "Cooldown", button, "CooldownFrameTemplate")
 		button.cooldown:SetAllPoints(button)
@@ -514,11 +499,6 @@ local function updateButton(id, group, config)
 		button:SetMouseClickEnabled(not config.clickThrough)
 	end
 
-	if not config.clickThrough then
-		button:SetScript("OnClick", cancelAura)
-	else
-		button:SetScript("OnClick", nil)
-	end
 	button.parent = group.parent
 	button:ClearAllPoints()
 	button:Hide()
