@@ -25,8 +25,11 @@ SUF auras, with all your filtering and layout kept intact.
 **How it works** (for the curious): SUF's aura icons are left exactly as they are, so you keep
 all of SUF's filtering, multi-frame layout, and in-combat updates. A pool of invisible *secure*
 buttons is laid over your cancelable buff icons out of combat, each carrying a `/cancelaura`
-macro. A secure state driver hides them in combat, so nothing is ever done to a protected frame
-mid-fight (no taint). It lives in `modules/auracancel.lua`, adapted from the
+macro. The buttons copy each icon's on-screen position rather than anchoring to it — anchoring
+a secure button to an icon would make the icon itself protected, and SUF's in-combat aura
+re-layout would then be blocked ("Interface action failed because of an AddOn"). A secure state
+driver hides the buttons in combat, so nothing is ever done to a protected frame mid-fight and
+SUF's own icons stay free (no taint). It lives in `modules/auracancel.lua`, adapted from the
 [JustAC](https://github.com/wealdly) addon's precombat click overlay.
 
 ## Aura fixes
