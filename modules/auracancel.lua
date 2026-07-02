@@ -37,14 +37,23 @@ local function ensurePool()
 end
 
 -- Point a layer at a SUF aura icon (out of combat only) with a /cancelaura macro for its buff.
+-- Copies the icon's rect instead of anchoring to it: a protected frame anchored to the icon
+-- makes the icon's geometry protected too, so SUF's own in-combat aura re-layout
+-- (SetHeight/SetWidth/SetScale on the icons) would be blocked. Rect copies leave the icons free;
+-- refresh() re-syncs positions out of combat.
 local function configureLayer(layer, icon, name)
+	local left, bottom = icon:GetLeft(), icon:GetBottom()
+	if( not left ) then return false end -- no rect yet
 	layer.icon = icon
 	layer:SetAttribute("type", "macro")
 	layer:SetAttribute("macrotext", "/cancelaura " .. name)
+	local scale = icon:GetEffectiveScale() / layer:GetEffectiveScale()
 	layer:ClearAllPoints()
-	layer:SetAllPoints(icon)
+	layer:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale, bottom * scale)
+	layer:SetSize(icon:GetWidth() * scale, icon:GetHeight() * scale)
 	layer:SetFrameLevel(icon:GetFrameLevel() + 10)
 	layer:Show()
+	return true
 end
 
 -- Cover every shown, cancelable player-buff icon with a secure layer (out of combat).
@@ -62,9 +71,8 @@ local function refresh()
 					if( placed < POOL_SIZE and icon:IsShown() and icon.unit and icon.auraInstanceID
 						and icon.filter and icon.filter:find("HELPFUL") and UnitIsUnit(icon.unit, "player") ) then
 						local data = C_UnitAuras.GetAuraDataByAuraInstanceID("player", icon.auraInstanceID)
-						if( data and data.name ) then
+						if( data and data.name and configureLayer(layers[placed + 1], icon, data.name) ) then
 							placed = placed + 1
-							configureLayer(layers[placed], icon, data.name)
 						end
 					end
 				end
