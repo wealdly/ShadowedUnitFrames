@@ -412,7 +412,6 @@ end
 local function showTooltip(self)
 	if( not ShadowUF.db.profile.locked ) then return end
 	if( GameTooltip:IsForbidden() ) then return end
-	if( ShadowUF.db.profile.tooltipCombat and InCombatLockdown() ) then return end
 
 	GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
 	if( self.filter == "TEMP" ) then
