@@ -71,7 +71,12 @@ local function refresh()
 					if( placed < POOL_SIZE and icon:IsShown() and icon.unit and icon.auraInstanceID
 						and icon.filter and icon.filter:find("HELPFUL") and UnitIsUnit(icon.unit, "player") ) then
 						local data = C_UnitAuras.GetAuraDataByAuraInstanceID("player", icon.auraInstanceID)
-						if( data and data.name and configureLayer(layers[placed + 1], icon, data.name) ) then
+						-- 12.0 secrets aura names in encounters (C_Secrets.ShouldAurasBeSecret, and it is
+						-- NOT combat-gated — a boss target alone flips it). Feeding a secret string to
+						-- SetAttribute taints SUF, so those buffs get no layer. Per-spell exempt auras
+						-- (GetSpellAuraSecrecy == 0) stay readable and still get one.
+						if( data and data.name and not issecretvalue(data.name)
+							and configureLayer(layers[placed + 1], icon, data.name) ) then
 							placed = placed + 1
 						end
 					end
