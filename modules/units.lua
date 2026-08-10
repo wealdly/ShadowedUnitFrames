@@ -616,7 +616,7 @@ end
 local function createFakeUnitUpdateTimer(frame)
 	if( not frame.updateTimer ) then
 		-- Flagged so consumers can tell a routine poll from an event-driven update (aura containers only rebuild on real identity changes)
-		frame.updateTimer = C_Timer.NewTicker(0.5, function()
+		frame.updateTimer = C_Timer.NewTicker(ShadowUF.Performance:GetRate("fakeUnitPoll"), function()
 			if( UnitExists(frame.unitSUF) ) then
 				frame.pollingUpdate = true
 				frame:FullUpdate()
@@ -625,6 +625,17 @@ local function createFakeUnitUpdateTimer(frame)
 		end)
 	end
 end
+
+-- Rebuild live when the rate changes via Performance UI, matching range/tags/indicators
+ShadowUF.Performance:RegisterCallback("fakeUnitPoll", function()
+	for frame in pairs(frameList) do
+		if( frame.updateTimer ) then
+			frame.updateTimer:Cancel()
+			frame.updateTimer = nil
+			createFakeUnitUpdateTimer(frame)
+		end
+	end
+end)
 
 -- Attribute set, something changed
 -- unitSUF = Active unitid, Blizzard's ping mixin reads frame.unit in secure context and a tainted one poisons the GUID for securecopy
