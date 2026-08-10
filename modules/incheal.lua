@@ -78,32 +78,59 @@ end
 
 -- Safety ticker: forces periodic recalculation while any prediction bar is visible.
 -- Catches stale data when WoW events don't fire (e.g. HoT expiry out of combat).
-function IncHeal:EnsureSafetyTicker(frame)
-	if( frame.healSafetyTicker ) then return end
-	frame.healSafetyTicker = C_Timer.NewTicker(0.5, function()
+-- One shared timer drives every registered frame, same pattern as range/tags/indicators,
+-- so a full raid costs one timer instead of one per frame.
+local predictionFrames = {}
+local sharedTicker
+
+local function stopSharedTicker()
+	if( sharedTicker and not next(predictionFrames) ) then
+		sharedTicker:Cancel()
+		sharedTicker = nil
+	end
+end
+
+local function sharedPredictionCheck()
+	for frame in pairs(predictionFrames) do
 		if( not frame.unitSUF or not UnitExists(frame.unitSUF) ) then
-			frame.healSafetyTicker:Cancel()
-			frame.healSafetyTicker = nil
-			return
+			-- Clearing the current key mid-pairs is defined behaviour in Lua
+			predictionFrames[frame] = nil
+		else
+			frame.healCalcTime = nil
+			-- The poll stands in for an event so the bars ease toward the refreshed amount instead of snapping
+			local m = ShadowUF.modules
+			if( frame.incHeal and frame.incHeal.total ) then m.incHeal:UpdateFrame(frame, "SAFETY_TICK") end
+			if( frame.healAbsorb and frame.healAbsorb.total ) then m.healAbsorb:UpdateFrame(frame, "SAFETY_TICK") end
+			if( frame.incAbsorb and frame.incAbsorb.total ) then m.incAbsorb:UpdateFrame(frame, "SAFETY_TICK") end
 		end
-		frame.healCalcTime = nil
-		-- The poll stands in for an event so the bars ease toward the refreshed amount instead of snapping
-		local m = ShadowUF.modules
-		if( frame.incHeal and frame.incHeal.total ) then m.incHeal:UpdateFrame(frame, "SAFETY_TICK") end
-		if( frame.healAbsorb and frame.healAbsorb.total ) then m.healAbsorb:UpdateFrame(frame, "SAFETY_TICK") end
-		if( frame.incAbsorb and frame.incAbsorb.total ) then m.incAbsorb:UpdateFrame(frame, "SAFETY_TICK") end
-	end)
+	end
+
+	stopSharedTicker()
+end
+
+function IncHeal:EnsureSafetyTicker(frame)
+	predictionFrames[frame] = true
+	if( not sharedTicker ) then
+		sharedTicker = C_Timer.NewTicker(ShadowUF.Performance:GetRate("healPrediction"), sharedPredictionCheck)
+	end
 end
 
 function IncHeal:CancelSafetyTicker(frame)
 	if( (frame.incHeal and frame.incHeal.total)
 		or (frame.healAbsorb and frame.healAbsorb.total)
 		or (frame.incAbsorb and frame.incAbsorb.total) ) then return end
-	if( frame.healSafetyTicker ) then
-		frame.healSafetyTicker:Cancel()
-		frame.healSafetyTicker = nil
-	end
+
+	predictionFrames[frame] = nil
+	stopSharedTicker()
 end
+
+-- Rebuild shared ticker when rate changes via Performance UI
+ShadowUF.Performance:RegisterCallback("healPrediction", function(newRate)
+	if( sharedTicker ) then
+		sharedTicker:Cancel()
+		sharedTicker = C_Timer.NewTicker(newRate, sharedPredictionCheck)
+	end
+end)
 
 function IncHeal:OnLayoutApplied(frame)
 	local bar = frame[self.frameKey]
