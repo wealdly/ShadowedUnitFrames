@@ -9595,6 +9595,8 @@ local function loadPerformanceOptions()
 		{key = "tagMonitorSlow",   order = 4, name = L["Slow tag refresh"],      desc = L["Refresh rate for slowly changing tags like AFK timers (seconds)."]},
 		{key = "fakeCastMonitor",  order = 5, name = L["Fake cast monitor"],     desc = L["Polling rate for cast bars on non-event units like focus target (seconds)."]},
 		{key = "combatIndicator",  order = 6, name = L["Combat indicator"],      desc = L["How often to poll NPC combat status for the combat indicator (seconds)."]},
+		{key = "fakeUnitPoll",     order = 7, name = L["Fake unit poll"],        desc = L["Polling rate for units that fire no events, like target of target (seconds)."]},
+		{key = "healPrediction",   order = 8, name = L["Heal prediction refresh"], desc = L["How often to recalculate incoming heal and absorb bars while they are visible (seconds)."]},
 	}
 
 	for _, def in ipairs(sliderDefs) do
@@ -9623,7 +9625,7 @@ local function loadPerformanceOptions()
 	}
 
 	rateSliders.reset = {
-		order = 8,
+		order = 9,
 		type = "execute",
 		name = L["Reset to defaults"],
 		desc = L["Reset all performance settings to their default values."],

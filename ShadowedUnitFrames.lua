@@ -56,6 +56,8 @@ function ShadowUF:OnInitialize()
 				tagMonitorSlow = 1.00,
 				fakeCastMonitor = 0.10,
 				combatIndicator = 1.00,
+				fakeUnitPoll = 0.50,
+				healPrediction = 0.50,
 			},
 		},
 	}
